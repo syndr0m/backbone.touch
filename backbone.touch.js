@@ -31,7 +31,8 @@
 
         touchPrevents : true,
 
-        isTouch : 'ontouchstart' in document && !('callPhantom' in window),
+        isTouch : ('ontouchstart' in document && !('callPhantom' in window)) ||
+                  window.navigator.msPointerEnabled,
 
         // Drop in replacement for Backbone.View#delegateEvent
         // Enables better touch support
@@ -55,6 +56,10 @@
                      that._touchHandler(e, {method:method});
                 };
                 if (this.isTouch && eventName === 'click') {
+                     if (window.navigator.msPointerEnabled) {
+                        this.$el.on('MSPointerDown' + suffix, selector, boundHandler);
+                        this.$el.on('MSPointerUp' + suffix, selector, boundHandler);
+                    }
                     this.$el.on('touchstart' + suffix, selector, boundHandler);
                     this.$el.on('touchend' + suffix, selector, boundHandler);
                 }
@@ -79,6 +84,22 @@
         // will stop propagation and prevent default
         // for *button* and *a* elements
         _touchHandler : function(e, data) {
+            if (window.navigator.msPointerEnabled) { // ie10.
+                switch (e.type) {
+                    case 'MSPointerUp':
+                        if (this.touchPrevents) {
+                            var tagName = e.currentTarget.tagName;
+                            if (tagName === 'BUTTON' ||
+                                tagName === 'A') {
+                                e.preventDefault();
+                                e.stopPropagation();
+                            }
+                        }
+                        data.method(e);
+                        break;
+                }
+                return;
+            }
             if (!('changedTouches' in e.originalEvent)) return;
             var touch = e.originalEvent.changedTouches[0];
             var x = touch.clientX;
