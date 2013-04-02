@@ -48,14 +48,15 @@
                 if (!method) throw new Error('Method "' + events[key] + '" does not exist');
                 var match = key.match(delegateEventSplitter);
                 var eventName = match[1], selector = match[2];
-                var boundHandler = _.bind(this._touchHandler,this);
                 method = _.bind(method, this);
+                // zepto & jqmobi don't support jquery 3rd parameter [data] in $el.on(...)
+                var that = this;
+                var boundHandler = function (e) {
+                     that._touchHandler(e, {method:method});
+                };
                 if (this.isTouch && eventName === 'click') {
                     this.$el.on('touchstart' + suffix, selector, boundHandler);
-                    this.$el.on('touchend' + suffix, selector,
-                        {method:method},
-                        boundHandler
-                    );
+                    this.$el.on('touchend' + suffix, selector, boundHandler);
                 }
                 else {
                     eventName += suffix;
@@ -77,7 +78,7 @@
         // The `touchPrevents` toggle decides if Backbone.touch
         // will stop propagation and prevent default
         // for *button* and *a* elements
-        _touchHandler : function(e) {
+        _touchHandler : function(e, data) {
             if (!('changedTouches' in e.originalEvent)) return;
             var touch = e.originalEvent.changedTouches[0];
             var x = touch.clientX;
@@ -101,7 +102,7 @@
                                 e.stopPropagation();
                             }
                         }
-                        e.data.method(e);
+                        data.method(e);
                     }
                     break;
             }
